@@ -100,6 +100,8 @@ func start_loop(sound: String, volume_db: float = 0.0) -> void:
 
 func stop_loop(sound: String) -> void:
 	if _loops.has(sound):
+		# Stop it before freeing it: in the browser the sound plays on its own once started.
+		_loops[sound].stop()
 		_loops[sound].queue_free()
 		_loops.erase(sound)
 

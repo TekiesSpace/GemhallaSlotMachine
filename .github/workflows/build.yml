@@ -25,11 +25,11 @@ jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache Godot and its web export templates
         id: cache-godot
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/godot
@@ -64,7 +64,7 @@ jobs:
           cp licenses/godot/COPYRIGHT.txt build/web/GODOT-COPYRIGHT.txt
           cp NOTICE.md build/web/NOTICE.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gemhalla-web
           path: build/web
@@ -73,8 +73,8 @@ jobs:
   server:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       - name: Build the server
@@ -94,16 +94,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gemhalla-web
           path: site
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -112,7 +112,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gemhalla-web
           path: web
