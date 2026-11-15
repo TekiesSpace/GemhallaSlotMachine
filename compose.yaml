@@ -1,0 +1,18 @@
+# Local staging: http://localhost:8070 (game) and http://localhost:8070/admin.
+# The admin password comes from .env (ADMIN_PASSWORD=...), which tools/run_docker.ps1
+# creates the first time. .env is git-ignored; keep it that way.
+name: gemhalla
+services:
+  gemhalla:
+    build: .
+    image: gemhalla:staging
+    ports:
+      - "127.0.0.1:8070:8080"
+    environment:
+      AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env (tools/run_docker.ps1 makes one)}
+    volumes:
+      - gemhalla-data:/data
+    restart: unless-stopped
+
+volumes:
+  gemhalla-data:

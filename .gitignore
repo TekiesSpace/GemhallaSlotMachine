@@ -1,0 +1,15 @@
+# Godot 4 cache and imports
+.godot/
+
+# Exports
+/build/
+*.tmp
+
+# Server build output and live session data
+server/bin/
+server/obj/
+server/data/
+
+# Secrets (the Docker admin password) and any other local settings
+.env
+.env.*

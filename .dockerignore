@@ -1,0 +1,8 @@
+# Only the server source and the browser build go into the image.
+*
+!server
+!build/web
+server/bin
+server/obj
+server/data
+build/web/*.import

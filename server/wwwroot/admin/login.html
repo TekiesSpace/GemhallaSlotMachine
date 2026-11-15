@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemhalla Admin - Sign in</title>
+<link rel="icon" type="image/png" href="/admin/favicon.png">
+<style>
+  :root {
+    --bg: #120b1f; --panel: #1d1530; --panel-2: #261b3e; --line: #3a2c58;
+    --text: #efe9ff; --muted: #a99cc6; --gold: #f3c969; --red: #ff6b8a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+         background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  form { width: 100%; max-width: 340px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 20px; display: grid; gap: 12px; }
+  h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: .5px; }
+  label { color: var(--muted); font-size: 13px; }
+  input, button { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  input:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+  button { cursor: pointer; background: var(--gold); color: #2b1600; border-color: var(--gold); font-weight: 600; }
+  #error { display: none; color: var(--red); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+<form method="post" action="/admin/login">
+  <h1>Gemhalla Admin</h1>
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+  <p id="error">That password isn't right. Try again.</p>
+  <button type="submit">Sign in</button>
+</form>
+<script>
+  if (new URLSearchParams(location.search).has("failed")) document.getElementById("error").style.display = "block";
+</script>
+</body>
+</html>

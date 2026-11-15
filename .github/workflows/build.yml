@@ -1,0 +1,122 @@
+# Builds Gemhalla on every push and pull request:
+#   - web:     exports the browser game with Godot (the "Web" preset in export_presets.cfg)
+#   - server:  builds the ASP.NET Core server in server/
+#   - pages:   on main, publishes the browser game to GitHub Pages (plays offline there)
+#   - release: on a v* tag (git tag v1.0.0 && git push origin v1.0.0), attaches the
+#              browser build as a zip to a GitHub Release
+# GitHub Pages must be switched on once: Settings > Pages > Source: "GitHub Actions".
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and its web export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Download Godot and its web export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q -o /tmp/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot/godot
+          chmod +x ~/godot/godot
+          # Only the single-threaded web templates are needed (the "Web" preset has no threads).
+          templates=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$templates"
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q -j -o /tmp/templates.tpz \
+            "templates/version.txt" "templates/web_nothreads_release.zip" "templates/web_nothreads_debug.zip" \
+            -d "$templates"
+
+      - name: Export the browser game
+        run: |
+          mkdir -p build/web
+          ~/godot/godot --headless --path . --import
+          ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          test -f build/web/index.wasm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gemhalla-web
+          path: build/web
+          if-no-files-found: error
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build the server
+        run: dotnet build server/GemhallaServer.csproj -c Release
+
+  pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [web, server]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gemhalla-web
+          path: site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [web, server]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gemhalla-web
+          path: web
+      - name: Zip the browser build and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip_name="gemhalla-web-${GITHUB_REF_NAME}.zip"
+          (cd web && zip -q -r "../$zip_name" .)
+          gh release create "$GITHUB_REF_NAME" "$zip_name" \
+            --repo "$GITHUB_REPOSITORY" --title "Gemhalla $GITHUB_REF_NAME" --generate-notes

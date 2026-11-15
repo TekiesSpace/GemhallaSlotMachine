@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Run through Microsoft's signed dotnet host instead of building an unsigned .exe,
+         which Windows app control (e.g. Smart App Control) may block after a rebuild. -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
+</Project>

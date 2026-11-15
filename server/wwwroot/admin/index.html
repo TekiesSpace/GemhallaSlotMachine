@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemhalla Admin</title>
+<link rel="icon" type="image/png" href="/admin/favicon.png">
+<style>
+  :root {
+    --bg: #120b1f; --panel: #1d1530; --panel-2: #261b3e; --line: #3a2c58;
+    --text: #efe9ff; --muted: #a99cc6; --gold: #f3c969; --green: #4fe39a; --red: #ff6b8a;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }  /* .row's flex would otherwise show hidden rows */
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+  header h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: .5px; }
+  #status { margin-left: auto; font-size: 13px; color: var(--muted); }
+  #status.on::before { content: "● "; color: var(--green); }
+  #status.off::before { content: "● "; color: var(--red); }
+  main { padding: 18px 20px; display: grid; gap: 16px; max-width: 1300px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 15px; color: var(--gold); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input, select, button { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+  input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+  input.num { width: 110px; } input.msg { width: 180px; }
+  button { cursor: pointer; background: #33254f; }
+  button:hover { border-color: var(--gold); }
+  button.gold { background: var(--gold); color: #2b1600; border-color: var(--gold); font-weight: 600; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  a { color: var(--gold); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); background: var(--panel-2); }
+  td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: #5a4d75; }
+  .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .name { font-weight: 600; }
+  .seen { color: var(--muted); font-size: 12px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #5d2a8c; color: #fff; font-size: 12px; }
+  .actions { display: grid; gap: 6px; min-width: 520px; }
+  .empty { padding: 26px; text-align: center; color: var(--muted); }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--gold); padding: 9px 16px; border-radius: 10px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  #toast.error { border-color: var(--red); }
+  #challengeStatus { font-size: 15px; margin: 2px 0 8px; }
+  #challengeStatus b { color: var(--gold); font-variant-numeric: tabular-nums; }
+  .standings { margin: 8px 0 0; padding-left: 22px; font-variant-numeric: tabular-nums; }
+  .standings li { padding: 1px 0; }
+  .standings .lead { color: var(--gold); font-weight: 600; }
+  .standings .off { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gemhalla Admin</h1>
+  <span id="status" class="off">Connecting…</span>
+  <form method="post" action="/admin/logout" id="signOut" hidden><button>Sign out</button></form>
+</header>
+<main>
+  <div class="cards">
+    <section class="card">
+      <h2>Starting credit for new sessions ($)</h2>
+      <div class="row">
+        <input id="defaultCredits" class="num" type="number" min="0" step="0.01">
+        <button class="gold" id="saveDefault">Save</button>
+      </div>
+      <div class="hint">Any session that connects for the first time starts with this amount.</div>
+    </section>
+    <section class="card">
+      <h2>Set up a session</h2>
+      <div class="row">
+        <input id="newName" placeholder="name, e.g. alice" maxlength="32">
+        <input id="newCredits" class="num" type="number" min="0" step="0.01" placeholder="$ credit">
+        <button class="gold" id="create">Create</button>
+      </div>
+      <div class="hint">Creates the session with its own starting credits (or sets them if it exists). Then open its game link.
+        Any <code>/?session=name</code> link also creates a session when opened.</div>
+    </section>
+    <section class="card">
+      <h2>Timed challenge</h2>
+      <div id="challengeStatus">No challenge running.</div>
+      <div class="row" id="challengeSetup">
+        <label>Minutes <input id="challengeMinutes" class="num" type="number" min="0.5" max="120" step="0.5" value="10"></label>
+        <label>Countdown (s) <input id="challengeLead" class="num" type="number" min="3" max="300" step="1" value="10"></label>
+        <button class="gold" id="challengeStart">Start challenge</button>
+      </div>
+      <div class="row" id="challengeRunning" hidden>
+        <button class="danger" id="challengeCancel">Cancel challenge</button>
+      </div>
+      <ol class="standings" id="challengeStandings"></ol>
+      <div class="hint">Everyone online counts down together, then plays from the starting credit above.
+        Most money when time runs out wins. Afterwards everyone goes back to the starting credit.
+        Players who join while it runs start from the starting credit too.</div>
+    </section>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Session</th><th>Credit</th><th>Bet</th><th>Free games</th><th>Last win</th><th>Spins</th><th>Next spin</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="sessions"><tr><td colspan="8" class="empty">No sessions yet. Create one above, or open the game.</td></tr></tbody>
+  </table>
+</main>
+<div id="toast"></div>
+
+<script>
+const OUTCOME_NAMES = {
+  line_win: "Big line win (5 Diamonds)", free_games: "Free games", hold_spin: "Hold & Spin",
+  jackpot_mini: "MINI jackpot", jackpot_minor: "MINOR jackpot", jackpot_major: "MAJOR jackpot", jackpot_grand: "GRAND jackpot",
+};
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Number(n).toLocaleString();
+// The game keeps money in cents; the page shows and takes dollars.
+const money = (cents) => "$" + (Number(cents) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const toCents = (dollars) => Math.round(Number(dollars) * 100);
+let socket = null;
+let outcomes = Object.keys(OUTCOME_NAMES);
+const rows = new Map();  // session id -> <tr>, kept so typing in a row survives updates
+
+function send(msg) {
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
+  else toast("Not connected to the server.", true);
+}
+
+function toast(text, error = false) {
+  const el = $("toast");
+  el.textContent = text;
+  el.className = "show" + (error ? " error" : "");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (el.className = ""), 2600);
+}
+
+function connect() {
+  socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/admin`);
+  socket.onopen = () => { $("status").textContent = "Connected"; $("status").className = "on"; };
+  socket.onclose = async () => {
+    $("status").textContent = "Disconnected, retrying…"; $("status").className = "off";
+    // Signed out (or the sign-in expired)? Then the page itself redirects to the login.
+    try {
+      const page = await fetch("/admin/", { redirect: "manual", cache: "no-store" });
+      if (page.type === "opaqueredirect") { location.href = "/admin/login"; return; }
+    } catch { /* server down: keep retrying */ }
+    setTimeout(connect, 2000);
+  };
+  socket.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === "error") toast(msg.text, true);
+    if (msg.type === "snapshot") render(msg);
+  };
+}
+
+// The challenge, as of the last snapshot; the clock is shown from deadline (local time).
+let challenge = { phase: "idle" };
+let challengeDeadline = 0;
+
+function clock(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function renderChallenge() {
+  const c = challenge;
+  const left = clock(challengeDeadline - Date.now());
+  const status = {
+    idle: "No challenge running.",
+    countdown: `Starting in <b>${left}</b>: a ${clock(c.seconds * 1000)} challenge.`,
+    running: `Running: <b>${left}</b> left, ${c.players} player${c.players === 1 ? "" : "s"}.`,
+    ended: "Time's up. Waiting for the last spins to finish…",
+  }[c.phase];
+  $("challengeStatus").innerHTML = status;
+  $("challengeSetup").hidden = c.phase !== "idle";
+  $("challengeRunning").hidden = c.phase === "idle";
+  // While it runs, the live standings; otherwise the last challenge's results.
+  const last = c.lastResults;
+  const list = c.phase === "idle" ? (last ? last.standings : []) : c.standings || [];
+  if (c.phase === "idle" && last) {
+    const names = last.winners.join(" and ");
+    $("challengeStatus").innerHTML += `<br>Last winner: <b>${names}</b> with ${money(last.winning_credits)}`
+      + ` (${new Date(last.finishedAt).toLocaleTimeString()}).`;
+  }
+  const best = list.length ? list[0].credits : 0;
+  $("challengeStandings").innerHTML = list.map((s) =>
+    `<li class="${s.credits === best ? "lead" : ""} ${s.online ? "" : "off"}">${escapeHtml(s.id)}: ${money(s.credits)}${s.online ? "" : " (offline)"}</li>`).join("");
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+setInterval(() => { if (challenge.phase === "countdown" || challenge.phase === "running") renderChallenge(); }, 250);
+
+$("challengeStart").onclick = () => {
+  const minutes = Number($("challengeMinutes").value);
+  const lead = Number($("challengeLead").value);
+  if (!(minutes > 0)) return toast("Enter how many minutes.", true);
+  send({ action: "challenge_start", seconds: Math.round(minutes * 60), lead_seconds: Math.round(lead || 10) });
+};
+$("challengeCancel").onclick = () => {
+  if (confirm("Cancel the challenge? Nobody wins, and everyone in it goes back to the starting credit.")) send({ action: "challenge_cancel" });
+};
+
+function render(snapshot) {
+  outcomes = snapshot.outcomes || outcomes;
+  if (snapshot.challenge) {
+    challenge = snapshot.challenge;
+    challengeDeadline = Date.now() + (challenge.remaining_ms || 0);
+    renderChallenge();
+  }
+  if (document.activeElement !== $("defaultCredits")) $("defaultCredits").value = (snapshot.defaultCredits / 100).toFixed(2);
+  const body = $("sessions");
+  const seen = new Set();
+  for (const s of snapshot.sessions) {
+    seen.add(s.id);
+    let tr = rows.get(s.id);
+    if (!tr) { tr = buildRow(s.id); rows.set(s.id, tr); }
+    tr.querySelector(".dot").className = "dot" + (s.online ? " on" : "");
+    tr.querySelector(".seen").textContent = s.online ? "playing now" : "last seen " + new Date(s.lastSeen).toLocaleString();
+    tr.querySelector(".credits").textContent = money(s.credits);
+    tr.querySelector(".bet").textContent = s.bet ? money(s.bet) : "–";
+    tr.querySelector(".free").textContent = s.freeGames || "–";
+    tr.querySelector(".win").textContent = money(s.lastWin);
+    tr.querySelector(".spins").textContent = fmt(s.spins);
+    tr.querySelector(".forced").innerHTML = s.forced ? `<span class="badge">${OUTCOME_NAMES[s.forced] || s.forced}</span>` : "normal";
+    body.appendChild(tr);  // keeps rows in the server's (alphabetical) order
+  }
+  for (const [id, tr] of rows) if (!seen.has(id)) { tr.remove(); rows.delete(id); }
+  const empty = body.querySelector(".empty");
+  if (snapshot.sessions.length && empty) empty.parentElement.remove();
+  if (!snapshot.sessions.length && !empty) body.innerHTML = '<tr><td colspan="8" class="empty">No sessions yet.</td></tr>';
+}
+
+function buildRow(id) {
+  const tr = document.createElement("tr");
+  const link = `/?session=${encodeURIComponent(id)}`;
+  tr.innerHTML = `
+    <td><span class="dot"></span><span class="name"></span><br><span class="seen"></span><br><a href="${link}" target="_blank">Open game ↗</a></td>
+    <td class="n credits"></td><td class="n bet"></td><td class="n free"></td><td class="n win"></td><td class="n spins"></td>
+    <td class="forced"></td>
+    <td><div class="actions">
+      <div class="row">
+        <input class="num set-amount" type="number" min="0" step="0.01" placeholder="$ amount">
+        <button data-act="set">Set credit</button>
+        <button data-act="add" data-amount="1000">+$10</button>
+        <button data-act="add" data-amount="10000">+$100</button>
+      </div>
+      <div class="row">
+        <select class="outcome">${outcomes.map((o) => `<option value="${o}">${OUTCOME_NAMES[o] || o}</option>`).join("")}</select>
+        <button class="gold" data-act="force">Force next spin</button>
+        <button data-act="clear">Clear</button>
+      </div>
+      <div class="row">
+        <input class="msg" maxlength="120" placeholder="message to player">
+        <button data-act="message">Send</button>
+        <button data-act="reset">Reset</button>
+        <button class="danger" data-act="delete">Delete</button>
+      </div>
+    </div></td>`;
+  tr.querySelector(".name").textContent = id;
+  tr.addEventListener("click", (event) => {
+    const act = event.target.dataset && event.target.dataset.act;
+    if (!act) return;
+    if (act === "set") {
+      const value = tr.querySelector(".set-amount").value;
+      if (value === "") return toast("Enter an amount first.", true);
+      send({ action: "set_credits", session: id, credits: toCents(value) });
+      toast(`${id}: credit set to ${money(toCents(value))}`);
+    } else if (act === "add") {
+      send({ action: "add_credits", session: id, amount: Number(event.target.dataset.amount) });
+      toast(`${id}: +${money(event.target.dataset.amount)}`);
+    } else if (act === "force") {
+      const outcome = tr.querySelector(".outcome").value;
+      send({ action: "force", session: id, outcome });
+      toast(`${id}: next spin will be ${OUTCOME_NAMES[outcome]}`);
+    } else if (act === "clear") {
+      send({ action: "force", session: id, outcome: "" });
+    } else if (act === "message") {
+      const input = tr.querySelector(".msg");
+      send({ action: "message", session: id, text: input.value });
+      input.value = "";
+    } else if (act === "reset") {
+      if (confirm(`Reset ${id} to the starting credit?`)) send({ action: "reset", session: id });
+    } else if (act === "delete") {
+      if (confirm(`Delete session ${id}? (It is recreated if that game connects again.)`)) send({ action: "delete", session: id });
+    }
+  });
+  return tr;
+}
+
+$("saveDefault").onclick = () => {
+  const value = $("defaultCredits").value;
+  if (value === "") return toast("Enter an amount first.", true);
+  send({ action: "set_default", credits: toCents(value) });
+  toast(`New sessions start with ${money(toCents(value))}`);
+};
+$("create").onclick = () => {
+  const name = $("newName").value.trim();
+  if (!name) return toast("Enter a session name.", true);
+  const credits = $("newCredits").value;
+  send({ action: "create", session: name, credits: credits === "" ? null : toCents(credits) });
+  toast(`Session ${name} ready`);
+  $("newName").value = "";
+};
+
+// Sign out only means something when the server has a password.
+fetch("/admin/login", { redirect: "manual", cache: "no-store" })
+  .then((r) => { if (r.type === "opaqueredirect") $("signOut").hidden = false; })
+  .catch(() => {});
+connect();
+</script>
+</body>
+</html>
