@@ -43,6 +43,7 @@ The math: RTP about 93.7% (40 million simulated games, including a 1% progressiv
 | `Dockerfile`, `compose.yaml` | Container image for the server plus the browser build |
 | `.github/workflows/build.yml` | Builds the game and the server; publishes GitHub Pages and Releases |
 | `docs/` | Server and math documentation, and the README's images |
+| `licenses/godot/` | Godot Engine's license and third-party notices, shipped with every exported build |
 
 ## Requirements
 
@@ -87,6 +88,14 @@ python -m http.server 8060 --directory build/web
 and open http://localhost:8060. On Windows, `tools/export_web.ps1` does both (and writes `build/gemhalla-web.zip` for upload to a game site); `tools/serve_web.ps1` serves an existing export again.
 
 Served by any static host, the game plays offline, single-player.
+
+The export contains the Godot engine, whose MIT license asks for its notice to go with every copy. If you publish a build, include `licenses/godot/LICENSE.txt` and `COPYRIGHT.txt` with it (`tools/export_web.ps1` and the GitHub workflow copy them in for you):
+
+```bash
+cp licenses/godot/LICENSE.txt build/web/GODOT-LICENSE.txt
+cp licenses/godot/COPYRIGHT.txt build/web/GODOT-COPYRIGHT.txt
+cp NOTICE.md build/web/
+```
 
 ## Run the multiplayer server
 
@@ -165,6 +174,6 @@ Never commit passwords, `.env` files or session data (`server/data/`). By contri
 
 ## License
 
-The code, art and sound made for Gemhalla are in the public domain ([LICENSE](LICENSE), the Unlicense). The gem images come from a CC0 sheet by KillGorack; see [NOTICE.md](NOTICE.md) for what came from where.
+The code, art and sound made for Gemhalla are in the public domain ([LICENSE](LICENSE), the Unlicense). The gem images come from a CC0 sheet by KillGorack, and exported builds contain the Godot Engine (MIT); see [NOTICE.md](NOTICE.md) for what came from where.
 
 Gemhalla is an original game. It uses common slot mechanics (Hold & Spin, free games, progressive jackpots) and no names, art or audio from any commercial slot machine. It is for entertainment with play money only.

@@ -36,7 +36,11 @@ const TONE := [
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	var source_path: String = args[0] if args.size() > 0 else "C:/Workspace/Resources/Godot/Art/gemstones/gemstones_256.png"
+	if args.is_empty():
+		push_error("Give the path to gemstones_256.png from https://opengameart.org/content/rotating-jewels")
+		quit(1)
+		return
+	var source_path: String = args[0]
 	var sheet := Image.load_from_file(source_path)
 	if sheet == null:
 		push_error("Could not read %s" % source_path)

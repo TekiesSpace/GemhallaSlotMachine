@@ -59,6 +59,10 @@ jobs:
           ~/godot/godot --headless --path . --import
           ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
           test -f build/web/index.wasm
+          # The build contains the Godot engine: ship its license and third-party notices with it.
+          cp licenses/godot/LICENSE.txt build/web/GODOT-LICENSE.txt
+          cp licenses/godot/COPYRIGHT.txt build/web/GODOT-COPYRIGHT.txt
+          cp NOTICE.md build/web/NOTICE.md
 
       - uses: actions/upload-artifact@v4
         with:

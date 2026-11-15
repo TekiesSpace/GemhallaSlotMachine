@@ -13,6 +13,10 @@ $out = Join-Path $project "build\web"
 New-Item -ItemType Directory -Force $out | Out-Null
 & $Godot --headless --path $project --export-release "Web" (Join-Path $out "index.html")
 if ($LASTEXITCODE -ne 0) { Write-Error "Export failed"; exit 1 }
+# The build contains the Godot engine: ship its license and third-party notices with it.
+Copy-Item (Join-Path $project "licenses\godot\LICENSE.txt") (Join-Path $out "GODOT-LICENSE.txt")
+Copy-Item (Join-Path $project "licenses\godot\COPYRIGHT.txt") (Join-Path $out "GODOT-COPYRIGHT.txt")
+Copy-Item (Join-Path $project "NOTICE.md") (Join-Path $out "NOTICE.md")
 # Zip ready to upload to itch.io (or any static host).
 $zip = Join-Path $project "build\gemhalla-web.zip"
 Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip -Force

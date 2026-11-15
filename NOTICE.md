@@ -19,4 +19,15 @@ Everything else in this repository is new work, dedicated to the public domain u
 - all sound effects, synthesized in code at startup (`scripts/audio/`);
 - the game, the math model, the server, the tools, the screenshots and the documentation.
 
-Godot Engine, .NET and the other tools used to build Gemhalla belong to their owners and come under their own licenses; none of them is included in this repository.
+## Godot Engine (MIT) in the built game
+
+The source in this repository doesn't include Godot, but every exported game does: the browser build (GitHub Pages, the Release zips, the container image) contains the Godot Engine and the third-party libraries built into it.
+
+- Godot Engine 4.7.2, https://godotengine.org. Copyright (c) 2014-present Godot Engine contributors; Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. MIT License: [`licenses/godot/LICENSE.txt`](licenses/godot/LICENSE.txt).
+- The engine's third-party components (such as FreeType, HarfBuzz, ICU, mbedTLS, zlib and the engine's default font) and their licenses: [`licenses/godot/COPYRIGHT.txt`](licenses/godot/COPYRIGHT.txt), Godot's own list for this version.
+
+Both files are copied into every browser build, as `GODOT-LICENSE.txt` and `GODOT-COPYRIGHT.txt`, next to this notice. They aren't covered by this repository's LICENSE.
+
+## Other tools
+
+.NET, ASP.NET Core and the container base images the server builds on belong to their owners and come under their own licenses (MIT for .NET and ASP.NET Core). None of them is included in this repository.
